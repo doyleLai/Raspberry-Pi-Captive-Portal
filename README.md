@@ -93,3 +93,4 @@ if __name__ == "__main__":
 ## References
 1. https://sribasu.com/programming-tutorials/raspberry-pi-wifi-access-point-captive-portal-python.html
 1. https://github.com/TomHumphries/RaspberryPiHotspot
+1. https://github.com/AloysAugustin/captive_portal
