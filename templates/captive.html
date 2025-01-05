@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0,width=device-width, user-scalable=no">
+    <title>Raspberry Pi Captive Portal</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}">
+    <script>
+        function loadNetworks() {
+            const xhttp = new XMLHttpRequest();
+            //xhttp.onload = function() {updateSSID(this);}
+            xhttp.open("GET", "/network");
+            xhttp.onreadystatechange = function () {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    var jsonResponse = JSON.parse(xhttp.responseText);
+                    console.log(jsonResponse);
+                    // Handle the JSON response here
+                    updateSSID(jsonResponse)
+                };
+            }
+            xhttp.send();
+        }
+
+        function updateSSID(response) {
+            var aps = response.ssids;
+            var ssidList = document.getElementById("ssidList");
+            ssidList.innerHTML = "";
+            for (var i = 0; i < aps.length; i++) {
+                var option = document.createElement("input");
+                option.type = "radio";
+                option.id = aps[i];
+                option.name = "ssid";
+                option.value = aps[i];
+                ssidList.appendChild(option);
+
+                var label = document.createElement("label");
+                label.htmlFor = aps[i];
+                label.appendChild(document.createTextNode(aps[i]));
+                ssidList.appendChild(label);
+                //ssidList.appendChild(document.createElement("br"));
+            }
+        }
+        //window.onload = updateSSID;
+    </script>
+</head>
+
+<body>
+    <div class="pageConainer">
+        <h1 class="header">
+            Raspberry Pi Captive Portal
+        </h1>
+        <div class="container">
+            <p>You are now connected to your Raspberry Pi as Wi-Fi Access Point.</p>
+            {% if status['hostname'] != "" %}
+            <p>The Raspberry Pi hostname is <b>{{status['hostname']}}</b>.</p>
+            {% endif%}
+            <p>Connect the Raspberry Pi to a Wi-Fi network.</p>
+        </div>
+
+        <div id="status">
+            {% if status['connectedWifi']['ssid'] != None %}
+            <div class="container">
+                <p>Connected to <b>{{status['connectedWifi']['ssid']}}</b>.</p>
+                <p>IP Address: <b>{{status['connectedWifi']['ip_address']}}</b></p>
+            </div>
+            {% endif%}
+        </div>
+
+        <div class="containerLabel">Network</div>
+        <div class="container">
+            <form name="networkList" action="/network" method="post">
+                <div id="ssidList">
+                    <script>loadNetworks()</script>
+                </div>
+                <input type="password" placeholder="Password" name="psk"><br>
+                <input type="submit" value="Connect">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0">
+    <title>Raspberry Pi Captive Portal</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}">
+</head>
+
+<body>
+    {% if result == "OK" %}
+    <p>Saved. The Raspberry Pi will try to connect the Wi-Fi network.</p>
+    <p>It may take up to 10 seconds.</p>
+    <p>You can close this page now.</p>
+    {% else %}
+    <p>Error occurs when saving the wifi credential.</p>
+    {% endif %}
+
+</body>
+
+</html>
