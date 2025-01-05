@@ -6,6 +6,12 @@ This setup assumes that your Pi connects to Wi-Fi and hosts a hotspot for the ca
 ## Set up virtual network interface and hostapd (Python)
 Edit the channel number to match the Wifi that Pi is connected to.
 ```
+sudo apt-get update
+```
+```
+sudo apt install hostapd
+```
+```
 #Import the required modules
 import os
 import subprocess
@@ -42,6 +48,10 @@ os.system("sudo hostapd -B /etc/hostapd/hostapd.conf")
 ```
 
 ## Configure DHCP server (dnsmasq)
+
+```
+sudo apt install dnsmasq
+```
 
 ```
 sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
