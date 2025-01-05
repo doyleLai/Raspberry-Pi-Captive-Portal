@@ -46,7 +46,21 @@ wpa_pairwise=CCMP""")
 # Start the hostapd service with the configuration file
 os.system("sudo hostapd -B /etc/hostapd/hostapd.conf")
 ```
-
+## Configure a static IP
+```
+sudo apt install dhcpcd
+```
+```
+sudo nano /etc/dhcpcd.conf
+```
+```
+interface ap0
+    static ip_address=192.168.4.1/24
+    nohook wpa_supplicant
+```
+```
+sudo service dhcpcd restart
+```
 ## Configure DHCP server (dnsmasq)
 
 ```
