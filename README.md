@@ -62,7 +62,7 @@ Create a dhcpcd configuration file with the ip address for ap0
 ```
 sudo nano /etc/dhcpcd.conf
 ```
-Save the file with the following configurations. 
+Add the following configurations to the file. 
 ```
 interface ap0
 static ip_address=192.168.4.1/24
@@ -79,16 +79,17 @@ Install dnsmasq
 ```
 sudo apt install dnsmasq
 ```
+Open the dnsmasq configuration file
 ```
 sudo nano /etc/dnsmasq.conf
 ```
-Save the file with the following configurations. 
+Add the following configurations to the file. 
 ```
 interface=ap0     
 dhcp-range=192.168.4.2,192.168.4.255,255.255.255.0,15m
 address=/#/192.168.4.1
 ```
-Reload the configuration files for the dnsmasq service
+Reload the dnsmasq service for the new configurations
 ```
 sudo systemctl reload dnsmasq
 ```
@@ -97,7 +98,7 @@ Restart the dnsmasq service
 sudo service dnsmasq restart
 ```
 ## Redirect all traffic to 192.168.4.1:80
-Not sure if you need to install iptables. If the command cannot be found, install it.
+Install iptables
 
 ```
 sudo apt install iptables
@@ -118,7 +119,7 @@ sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
 ## Set up captive portal on 192.168.4.1:80 (Flask)
 We will use Python and Flask framework to host the captive portal.
 
-If you have not installed the Flask framwok, run
+If you have not installed the Flask, run
 ```
 sudo apt install python3-flask
 ```
