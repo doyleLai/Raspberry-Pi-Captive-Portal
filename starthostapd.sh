@@ -33,8 +33,6 @@ EOF
 # Start the hostapd service with the configuration file
 sudo hostapd -B /etc/hostapd/hostapd.conf
 
-#Configuring the DHCP server (dnsmasq) - https://github.com/TomHumphries/RaspberryPiHotspot
-
 #redirect traffic
 sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 80 -j DNAT --to-destination 192.168.4.1:80
 sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 443 -j DNAT --to-destination 192.168.4.1:80

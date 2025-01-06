@@ -52,7 +52,7 @@ sudo hostapd -B /etc/hostapd/hostapd.conf
 ```
 
 ## Configure a static IP (dhcpcd)
-You need a static IP for the interface. This step is still needed altought your have set the ip address for the interface in the previous step.
+You need a static IP for the interface. This step is still needed altough your have set the ip address for the interface in the previous step.
 
 Install dhcpcd
 ```
@@ -102,11 +102,11 @@ Not sure if you need to install iptables. If the command cannot be found, instal
 ```
 sudo apt install iptables
 ```
-Redirect all incoming traffic on 80 to 192.168.4.1:80, where we will set up a web server on it.
+Redirect all incoming traffic on port 80 to 192.168.4.1, where we will set up a web server on it.
 ```
 sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 80 -j DNAT --to-destination 192.168.4.1:80
 ```
-Do the same for for 443
+Apply the same configuration for port 443
 ```
 sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 443 -j DNAT --to-destination 192.168.4.1:80
 ```
@@ -116,35 +116,110 @@ sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
 ```
 
 ## Set up captive portal on 192.168.4.1:80 (Flask)
-We will use python and Flask framwork to host the captive portal. 
+We will use Python and Flask framework to host the captive portal.
+
+The code here is a bit messy because of its particular functionality. However, you can host any website on 192.168.4.1:80 to serve as the captive portal.
+
+As mentioned in the first section, this website allows the user to connect the Raspberry Pi to a Wi-Fi network. Therefore, the index page would show the available network. The list of networks is scanned using Linux commands and sent back to the page's Ajax GET request.
+
+After the user selects the network, the selected SSID and inputted password will be sent along with a POST to the server. The server uses the confidential to configure the wpa_supplicant.conf.
+
+Some function bodies are hidden here. Please read captiveserver.py for the full source code.
 ```
 from flask import Flask, request, redirect, render_template
-#import urllib
-#import os
+import subprocess
 
-app = Flask(__name__)
+# Helper functions to interact with the Linux system using command line.
+def getHostname() -> str:
+def getWifiNetworks(interface:str = "wlan0") -> list[str]:
+def getCurrentNetwork(interface:str = "wlan0") -> str:
+def getCurrentIP(interface:str = "wlan0") -> str:
+def setWifiNetwork(ssid:str, psk:str, interface:str = "wlan0") -> bool:
 
-# Pass the required route to the decorator.
-@app.route("/hello")
-def hello(hello):
-    return "Hello, Welcome to GeeksForGeeks"
+app = Flask(__name__) 
 
 @app.route('/favicon.ico')
 def favicon():
     return app.send_static_file('favicon.ico')
 
+@app.route('/network', methods=['POST'])
+def network_post():
+    if request.method == 'POST' and 'ssid' in request.form and 'psk' in request.form:
+        ssid= request.form['ssid']
+        psk = request.form['psk']
+        setWifiNetwork(ssid, psk)
+        return render_template("result.html", result="OK")
+    return render_template("result.html", result="Error")
+
+@app.route('/network', methods=['GET'])
+def network_get():
+    networks = getWifiNetworks()
+    if networks != None:
+        return {"ssids":networks}
+    return "Error"
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
-    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-    return render_template("captive.html")
-
+    status = {
+        "hostname": getHostname(),
+        "connectedWifi" : {
+            "ssid":getCurrentNetwork(),
+            "ip_address":getCurrentIP()
+        }
+    }
+    return render_template("captive.html", status=status)
+  
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",port=80) 
+    #app.debug = True
+    app.run(host="0.0.0.0", port=80) 
 
 ```
+## Set up after reboot
+After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. The script starthostapd.sh includes some previous seem commands to recreate the captive portal. If you have rebooted the board, just run it.
+```
+sudo starthostapd.sh
+```
+You also need to restart the Flask app.
+```
+sudo python3 captiveserver.py
+```
 
+## Set up auto-run on startup
+Create a .service file in the systemd directory
+```
+sudo nano /lib/systemd/system/CaptivePortal.service
+```
+Save the file with the following content. Assume the downloaded file are in your home directory. Replace \<username\> with your username. 
+```
+[Unit]
+Description=Captive Portal Service
+After=multi-user.target
+
+[Service]
+WorkingDirectory=/home/<username>/
+User=root
+ExecStart=/home/<username>/captiveportal_start.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+ExecStart set the command we want to run. In this case, it is the captiveportal_start.sh that run `starthostapd.sh` and `python3 captiveserver.py`.
+
+Reload the systemctl.
+```
+sudo systemctl daemon-reload
+```
+Enable our service so it will run on startup.
+```
+sudo systemctl enable CaptivePortal.service
+```
+Reboot the board to verifly the service. The hotspot and captive portal should run automatically after reboot.
+```
+sudo reboot
+```
 ## References
+I made reference to many online courses on Google Search, but I can't recall it. The primary references are the following.
 1. https://sribasu.com/programming-tutorials/raspberry-pi-wifi-access-point-captive-portal-python.html
 1. https://github.com/TomHumphries/RaspberryPiHotspot
 1. https://github.com/AloysAugustin/captive_portal
