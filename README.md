@@ -1,9 +1,9 @@
 # Set up a Raspberry Pi Captive Portal (Workable Example!)
 This is a workable, as of Jan 2025, and simple example that needs minimal installation and hardware to set up a captive portal on a Raspberry Pi. I guarantee it works on the Pi Zero 2 board. I created this because there are many guidelines on the internet, but all of them are outdated and cannot work on the current Pi OS. Even the same topic on the Raspberry Pi official website does not work! I have gone through many guidelines and consolidated the up-to-date commands to guide you through how to create a Captive Portal on Raspberry Pi.
 
+A Captive Portal is usually the landing page for logging in before connecting to the internet. In fact, there is no need to really connect the hotspot clients to the internet. With this technology, you can use it for many other purposes. For example, you can use the webpage for data entry. This guideline focuses on how to create the captive portal but how you use the it is up to you. In the steps here, the captive portal is a simple echo system that displays the text that the user has submitted.
 
-A Captive Portal is usually the landing page for logging in before connecting to the internet. In fact, there is no need to really connect the hotspot clients to the internet. With this technology, you can use it for many other purposes. For example, you can use the webpage for data entry. This guideline focuses on how to create the Captive Portal but how you use the Captive Portal is up to you. In this demo, I will set up the captive portal as a Wi-Fi configuration page for inputting the Wi-Fi password so that the Raspberry Pi can connect to a Wi-Fi network. This is useful when you need to deploy the board in an environment where the Wi-Fi credentials cannot be pre-installed. The code logic for accepting inputs and configuring the Wi-Fi is in the Flask app web server. You can modify the Flask app for another purpose.
-
+>In the repository file, there is a complete Wi-Fi configuration page for inputting Wi-Fi password to let the Raspberry Pi connect to a Wi-Fi network. This is useful when you need to deploy the board in an environment where the Wi-Fi credentials cannot be pre-installed. You can modify the Flask app to suit your needs.
 
 This setup creates a virtual network interface on the network card. You can use the default interface to connect the Raspberry Pi to a Wi-Fi network. While on the same channel, you can use the virtual interface to create a hotspot to accept connections - no need for an extra Wi-Fi dongle!
 
@@ -79,10 +79,6 @@ Install dnsmasq
 ```
 sudo apt install dnsmasq
 ```
-We are creating a new configuration file. Backup the default one.
-```
-sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
-```
 ```
 sudo nano /etc/dnsmasq.conf
 ```
@@ -95,6 +91,10 @@ address=/#/192.168.4.1
 Reload the configuration files for the dnsmasq service
 ```
 sudo systemctl reload dnsmasq
+```
+Restart the dnsmasq service
+```
+sudo service dnsmasq restart
 ```
 ## Redirect all traffic to 192.168.4.1:80
 Not sure if you need to install iptables. If the command cannot be found, install it.
@@ -118,63 +118,43 @@ sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
 ## Set up captive portal on 192.168.4.1:80 (Flask)
 We will use Python and Flask framework to host the captive portal.
 
-The code here is a bit messy because of its particular functionality. However, you can host any website on 192.168.4.1:80 to serve as the captive portal.
-
-As mentioned in the first section, this website allows the user to connect the Raspberry Pi to a Wi-Fi network. Therefore, the index page would show the available network. The list of networks is scanned using Linux commands and sent back to the page's Ajax GET request.
-
-After the user selects the network, the selected SSID and inputted password will be sent along with a POST to the server. The server uses the confidential to configure the wpa_supplicant.conf.
-
-Some function bodies are hidden here. Please read captiveserver.py for the full source code.
+If you have not installed the Flask framwok, run
+```
+sudo apt install python3-flask
+```
 ```
 from flask import Flask, request, redirect, render_template
-import subprocess
-
-# Helper functions to interact with the Linux system using command line.
-def getHostname() -> str:
-def getWifiNetworks(interface:str = "wlan0") -> list[str]:
-def getCurrentNetwork(interface:str = "wlan0") -> str:
-def getCurrentIP(interface:str = "wlan0") -> str:
-def setWifiNetwork(ssid:str, psk:str, interface:str = "wlan0") -> bool:
 
 app = Flask(__name__) 
 
-@app.route('/favicon.ico')
-def favicon():
-    return app.send_static_file('favicon.ico')
-
-@app.route('/network', methods=['POST'])
-def network_post():
-    if request.method == 'POST' and 'ssid' in request.form and 'psk' in request.form:
-        ssid= request.form['ssid']
-        psk = request.form['psk']
-        setWifiNetwork(ssid, psk)
-        return render_template("result.html", result="OK")
-    return render_template("result.html", result="Error")
-
-@app.route('/network', methods=['GET'])
-def network_get():
-    networks = getWifiNetworks()
-    if networks != None:
-        return {"ssids":networks}
+@app.route('/data', methods=['POST'])
+def data_post():
+    if request.method == 'POST' and 'myData' in request.form:
+        myData = request.form['myData']
+        return f"Received {myData}"
     return "Error"
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
-    status = {
-        "hostname": getHostname(),
-        "connectedWifi" : {
-            "ssid":getCurrentNetwork(),
-            "ip_address":getCurrentIP()
-        }
-    }
-    return render_template("captive.html", status=status)
+    html = f"""
+    <form action="/data" method="post">
+    <input type="text" name="myData">
+    <input type="submit">
+    </form>
+    """
+    return html
   
 if __name__ == "__main__":
     #app.debug = True
     app.run(host="0.0.0.0", port=80) 
-
 ```
+Save the python code as captiveserver.py and run
+```
+sudo python3 captiveserver.py
+```
+Now, the setup is complete. You can test it by finding the hotspot on your device. The captive portal should pop up automatically.
+
 ## Set up after reboot
 After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. The script starthostapd.sh includes some previous seem commands to recreate the captive portal. If you have rebooted the board, just run it.
 ```
