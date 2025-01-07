@@ -3,7 +3,7 @@ This is a workable, as of Jan 2025, and simple example that needs minimal instal
 
 A Captive Portal is usually the landing page for logging in before connecting to the internet. In fact, there is no need to really connect the hotspot clients to the internet. With this technology, you can use it for many other purposes. For example, you can use the webpage for data entry. This guideline focuses on how to create the captive portal but how you use the it is up to you. In the steps here, the captive portal is a simple echo system that displays the text that the user has submitted.
 
->In the repository file, there is a complete Wi-Fi configuration page for inputting Wi-Fi password to let the Raspberry Pi connect to a Wi-Fi network. This is useful when you need to deploy the board in an environment where the Wi-Fi credentials cannot be pre-installed. You can modify the Flask app to suit your needs.
+>In the repository file, the captive portal is a Wi-Fi configuration page for inputting Wi-Fi password to let the Raspberry Pi connect to a Wi-Fi network. This is useful when you need to deploy the board in an environment where the Wi-Fi credentials cannot be pre-installed. You can modify the Flask app to suit your needs.
 
 This setup creates a virtual network interface on the network card. You can use the default interface to connect the Raspberry Pi to a Wi-Fi network. While on the same channel, you can use the virtual interface to create a hotspot to accept connections - no need for an extra Wi-Fi dongle!
 
@@ -159,7 +159,10 @@ Now, the setup is complete. You can test it by finding the hotspot on your devic
 ## Set up after reboot
 After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. The script starthostapd.sh includes some previous seem commands to recreate the captive portal. If you have rebooted the board, just run it.
 ```
-sudo starthostapd.sh
+chmod +x starthostapd.sh
+```
+```
+sudo ./starthostapd.sh
 ```
 You also need to restart the Flask app.
 ```
@@ -175,7 +178,9 @@ Save the file with the following content. Assume the downloaded file are in your
 ```
 [Unit]
 Description=Captive Portal Service
-After=multi-user.target
+Requires=sys-subsystem-net-devices-wlan0.device
+After=network.target
+After=sys-subsystem-net-devices-wlan0.device
 
 [Service]
 WorkingDirectory=/home/<username>/
@@ -185,7 +190,13 @@ ExecStart=/home/<username>/captiveportal_start.sh
 [Install]
 WantedBy=multi-user.target
 ```
-ExecStart set the command we want to run. In this case, it is the captiveportal_start.sh that run `starthostapd.sh` and `python3 captiveserver.py`.
+ExecStart set the command we want to run. In this case, it is the captiveportal_start.sh that runs `./starthostapd.sh` and `python3 captiveserver.py`.
+
+Make sure the script can be executed.
+```
+chmod +x captiveportal_start.sh
+```
+
 
 Reload the systemctl.
 ```
@@ -204,3 +215,4 @@ I made reference to many online courses on Google Search, but I can't recall it.
 1. https://sribasu.com/programming-tutorials/raspberry-pi-wifi-access-point-captive-portal-python.html
 1. https://github.com/TomHumphries/RaspberryPiHotspot
 1. https://github.com/AloysAugustin/captive_portal
+1. https://wiki.archlinux.org/title/Software_access_point
