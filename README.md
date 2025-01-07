@@ -157,19 +157,79 @@ sudo python3 captiveserver.py
 Now, the setup is complete. You can test it by finding the hotspot on your device. The captive portal should pop up automatically.
 
 ## Set up after reboot
-After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. The script starthostapd.sh includes some previous seem commands to recreate the captive portal. If you have rebooted the board, just run it.
+After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. Create a script to includes commands needed to recreate the captive portal. Whenever you have rebooted the board, just run it.
+```
+nano starthostapd.sh
+```
+```
+#!/bin/bash
+
+# Record the time when the script is run
+echo $(date -u) "The script has run." >> starthostapd_log
+
+# Check if the script is run as root
+if [ $(id -u) -ne 0 ]
+  then echo Please run this script as root or using sudo!
+  exit
+fi
+
+# Create a virtual network interface for the access point
+sudo iw dev wlan0 interface add ap0 type __ap
+
+# Configure the IP address and netmask for the access point interface
+sudo ip addr add 192.168.4.1/24 dev ap0
+
+# Enable the access point interface
+sudo ip link set ap0 up
+
+# Create a hostapd configuration file with the SSID and password
+sudo cat > /etc/hostapd/hostapd.conf << EOF
+interface=ap0
+ssid=Raspberry Pi AP
+wpa_passphrase=raspberry
+hw_mode=g
+channel=7
+wpa=2
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=CCMP
+EOF
+
+# Start the hostapd service with the configuration file
+sudo hostapd -B /etc/hostapd/hostapd.conf
+
+#redirect traffic
+sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 80 -j DNAT --to-destination 192.168.4.1:80
+sudo iptables -t nat -A PREROUTING -p tcp -m tcp -s 192.168.4.0/24 --dport 443 -j DNAT --to-destination 192.168.4.1:80
+sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
+```
+Give the execute permission.
 ```
 chmod +x starthostapd.sh
 ```
+Run it
 ```
 sudo ./starthostapd.sh
 ```
-You also need to restart the Flask app.
+You also need to start the Flask app.
 ```
 sudo python3 captiveserver.py
 ```
 
 ## Set up auto-run on startup
+Create a script that that runs `./starthostapd.sh` and `python3 captiveserver.py`. We will create a service in systemd to let the OS runs this script on statup.
+```
+nano captiveportal_start.sh
+```
+```
+#!/bin/bash
+echo "Run starthostapd.sh $(date)" >> hostapd_log
+./starthostapd.sh >> hostapd_log 2>&1
+python3 captiveserver.py
+```
+Make sure the script can be executed.
+```
+chmod +x captiveportal_start.sh
+```
 Create a .service file in the systemd directory
 ```
 sudo nano /lib/systemd/system/CaptivePortal.service
@@ -190,13 +250,7 @@ ExecStart=/home/<username>/captiveportal_start.sh
 [Install]
 WantedBy=multi-user.target
 ```
-ExecStart set the command we want to run. In this case, it is the captiveportal_start.sh that runs `./starthostapd.sh` and `python3 captiveserver.py`.
-
-Make sure the script can be executed.
-```
-chmod +x captiveportal_start.sh
-```
-
+ExecStart set the command we want to run. In this example, it is the captiveportal_start.sh.
 
 Reload the systemctl.
 ```
