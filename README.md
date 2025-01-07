@@ -234,7 +234,7 @@ Create a .service file in the systemd directory
 ```
 sudo nano /lib/systemd/system/CaptivePortal.service
 ```
-Save the file with the following content. Assume the downloaded file are in your home directory. Replace \<username\> with your username. 
+Save the file with the following content. Assume the script files are in your home directory. Replace \<username\> with your username. 
 ```
 [Unit]
 Description=Captive Portal Service
