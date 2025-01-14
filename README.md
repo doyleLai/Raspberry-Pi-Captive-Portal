@@ -154,7 +154,9 @@ Save the python code as captiveserver.py and run
 ```
 sudo python3 captiveserver.py
 ```
-Now, the setup is complete. You can test it by finding the hotspot on your device. The captive portal should pop up automatically.
+Now, the setup is complete. You can test it by finding the hotspot on your device. The captive portal should pop up automatically. The captive portal will look like this.
+
+![demo screenshots](/demo.png)
 
 ## Set up after reboot
 After completing the previous steps, you should have installed the required packages and made the necessary configurations. Some configurations will not be retained after rebooting. Create a script to includes commands needed to recreate the captive portal. Whenever you have rebooted the board, just run it.
